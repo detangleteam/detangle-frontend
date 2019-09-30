@@ -1,0 +1,35 @@
+#Columns {
+    display: flex;
+    flex-direction: column;
+}
+
+#ColumnsList {
+    overflow-y: auto;
+}
+
+#Main {
+    display: flex;
+    flex-direction: column;
+}
+
+#Controls {
+    display: flex;
+    justify-content: space-evenly;
+    max-height: 180px;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+td, th {
+  border: 1px solid #999;
+  padding: 0.5rem;
+  text-align: left;
+}
+
+tbody tr:nth-child(odd) {
+  background: #eee;
+}
+
+
