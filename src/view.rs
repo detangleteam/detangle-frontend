@@ -94,7 +94,9 @@ fn sort_view(model: &Model) -> Node<Msg> {
 }
 
 fn data_view(model: &Model) -> Node<Msg> {
-    let mut sorted_items = model.items.clone();
+    let mut sorted_items = model.items.iter()
+        .filter(|r| apply_filters(model, r))
+        .collect::<Vec<&Vec<String>>>();
     sorted_items.sort_by(|a, b| sort_items(model, a, b));
 
     div![
@@ -109,7 +111,6 @@ fn data_view(model: &Model) -> Node<Msg> {
                 .collect::<Vec<Node<Msg>>>()]],
             tbody![sorted_items
                 .iter()
-                .filter(|r| apply_filters(model, r))
                 .map(|r| tr![r
                     .iter()
                     .enumerate()
