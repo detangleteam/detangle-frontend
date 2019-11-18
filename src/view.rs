@@ -80,7 +80,7 @@ fn all_column_control(model: &Model) -> Node<Msg> {
     div![
         attrs! {At::Class => "ColumnControl"},
         label![
-            attrs! {At::Class => "ColumnControlLabel"; At::For => input_id},
+            attrs! {At::Class => "AllColumnControlLabel"; At::For => input_id},
             "All"
         ],
         select![

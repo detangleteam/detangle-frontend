@@ -20,6 +20,9 @@
     max-height: 180px;
 }
 
+.AllColumnControlLabel {
+    font-weight: bold;
+}
 .ColumnControl {
     display: flex;
     justify-content: space-between;
