@@ -149,24 +149,32 @@ fn item_table(model: &Model) -> Node<Msg> {
     div![
         attrs! {At::Id => "Data", At::Class => "DataView"},
         table![
-            thead![tr![model
-                .columns
-                .iter()
-                .enumerate()
-                .filter(|(i, _)| actual_column_visibility[*i])
-                .map(|(_, c)| th![c])
-                .collect::<Vec<Node<Msg>>>()]],
+            thead![header_row(model, &actual_column_visibility)],
             tbody![sorted_items
                 .iter()
-                .map(|r| tr![r
-                    .iter()
-                    .enumerate()
-                    .filter(|(i, _)| actual_column_visibility[*i])
-                    .map(|(_, c)| td![c])
-                    .collect::<Vec<Node<Msg>>>()])
+                .map(|item| item_row(model, &actual_column_visibility, item))
                 .collect::<Vec<Node<Msg>>>()]
         ]
     ]
+}
+
+fn header_row(model: &Model, column_visibility: &Vec<bool>) -> Node<Msg> {
+    tr![model
+        .columns
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| column_visibility[*i])
+        .map(|(_, c)| th![c])
+        .collect::<Vec<Node<Msg>>>()]
+}
+
+fn item_row(model: &Model, column_visibility: &Vec<bool>, item: &Vec<String>) -> Node<Msg> {
+    tr![item
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| column_visibility[*i])
+        .map(|(_, c)| td![div![attrs! {At::Class => "ItemValue"}, c]])
+        .collect::<Vec<Node<Msg>>>()]
 }
 
 // Helper Functions

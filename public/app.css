@@ -25,6 +25,11 @@
     justify-content: space-between;
 }
 
+.ItemValue {
+    height: 80px;
+    overflow-y: auto;
+}
+
 table {
   border-collapse: collapse;
 }
