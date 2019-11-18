@@ -26,7 +26,7 @@
 }
 
 .ItemValue {
-    height: 80px;
+    height: 4em;
     overflow-y: auto;
 }
 
