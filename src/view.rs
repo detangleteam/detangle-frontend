@@ -63,6 +63,7 @@ fn column_controls(model: &Model) -> Node<Msg> {
         h2!["Columns"],
         div![
             attrs! {At::Id => "ColumnsList"},
+            all_column_control(model),
             model
                 .columns
                 .iter()
@@ -73,8 +74,29 @@ fn column_controls(model: &Model) -> Node<Msg> {
     ]
 }
 
+fn all_column_control(model: &Model) -> Node<Msg> {
+    let input_id = "column_visibility_all".to_string();
+
+    div![
+        attrs! {At::Class => "ColumnControl"},
+        label![
+            attrs! {At::Class => "ColumnControlLabel"; At::For => input_id},
+            "All"
+        ],
+        select![
+            attrs! {At::Id => input_id; At::Class => "ColumnControlInput";},
+            input_ev(Ev::Input, move |value| Msg::ChangeAllColumnVisibility(value)),
+            option![attrs! {At::Value => ""; At::Selected => true.as_at_value()}, ""],
+            option![attrs! {At::Value => "Auto";}, "Auto"],
+            option![attrs! {At::Value => "Shown";}, "Shown"],
+            option![attrs! {At::Value => "Hidden";}, "Hidden"]
+        ]
+    ]
+}
+
 fn column_control(model: &Model, column_index: usize) -> Node<Msg> {
     let input_id = format!("column_visibility_{}", column_index);
+    let current_value = model.column_visibility[column_index];
 
     div![
         attrs! {At::Class => "ColumnControl"},
@@ -83,11 +105,11 @@ fn column_control(model: &Model, column_index: usize) -> Node<Msg> {
             model.columns[column_index]
         ],
         select![
-            attrs! {At::Id => input_id; At::Class => "ColumnControlInput"; At::Value => "Auto"},
+            attrs! {At::Id => input_id; At::Class => "ColumnControlInput";},
             input_ev(Ev::Input, move |value| Msg::ChangeColumnVisibility(column_index, value)),
-            option![attrs! {At::Value => "Auto"}, "Auto"],
-            option![attrs! {At::Value => "Shown"}, "Shown"],
-            option![attrs! {At::Value => "Hidden"}, "Hidden"]
+            option![attrs! {At::Value => "Auto"; At::Selected => (current_value == ColumnVisibility::Auto).as_at_value()}, "Auto"],
+            option![attrs! {At::Value => "Shown"; At::Selected => (current_value == ColumnVisibility::Shown).as_at_value()}, "Shown"],
+            option![attrs! {At::Value => "Hidden"; At::Selected => (current_value == ColumnVisibility::Hidden).as_at_value()}, "Hidden"]
         ]
     ]
 }
@@ -188,17 +210,10 @@ fn sort_items(model: &Model, item_a: &[String], item_b: &[String]) -> Ordering {
 fn compute_column_visibility(model: &Model, items: &Vec<&Vec<String>>) -> Vec<bool> {
     let mut actual_column_visibility = vec![false; model.columns.len()];
     for (column, vis_option) in model.column_visibility.iter().enumerate() {
-        match vis_option {
-            ColumnVisibility::Hidden => actual_column_visibility[column] = false,
-            ColumnVisibility::Shown => actual_column_visibility[column] = true,
-            ColumnVisibility::Auto => {
-                for item in items.iter() {
-                    if !item[column].is_empty() {
-                        actual_column_visibility[column] = true;
-                        break;
-                    }
-                }
-            }
+        actual_column_visibility[column] = match vis_option {
+            ColumnVisibility::Hidden => false,
+            ColumnVisibility::Shown => true,
+            ColumnVisibility::Auto => items.iter().any(|item| !item[column].is_empty())
         }
     }
     return actual_column_visibility;

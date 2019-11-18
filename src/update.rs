@@ -11,6 +11,7 @@ pub enum Msg {
     ChangeFilterColumn(usize, String),
     ChangeFilterValue(usize, String),
     ChangeColumnVisibility(usize, String),
+    ChangeAllColumnVisibility(String),
     ChangeSortColumn(usize, String),
     DataFetched(FetchObject<String>),
     FetchData,
@@ -30,6 +31,19 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 "Hidden" => ColumnVisibility::Hidden,
                 "Shown" => ColumnVisibility::Shown,
                 _ => panic!("Unexpected ColumnVisibility")
+            }
+        },
+        Msg::ChangeAllColumnVisibility(new_value) => {
+            if !new_value.is_empty() {
+                let new_value = match new_value.as_ref() {
+                    "Auto" => ColumnVisibility::Auto,
+                    "Hidden" => ColumnVisibility::Hidden,
+                    "Shown" => ColumnVisibility::Shown,
+                    _ => panic!("Unexpected ColumnVisibility")
+                };
+                for index in 0..model.column_visibility.len() {
+                    model.column_visibility[index] = new_value;
+                }
             }
         },
         Msg::ChangeSortColumn(index, new_value) => {
