@@ -12,9 +12,8 @@ mod view;
 
 #[wasm_bindgen(start)]
 pub fn render() {
-    let app = seed::App::build(|_, _| Model::default(), update::update, view::view)
-        .finish()
-        .run();
+    let app = seed::App::build(|_, _| Init::new(Model::default()), update::update, view::view)
+        .build_and_start();
 
     app.update(Msg::FetchData);
 }
