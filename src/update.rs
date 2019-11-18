@@ -4,7 +4,7 @@ use seed::fetch::FetchObject;
 use seed::prelude::*;
 use seed::Request;
 
-use crate::model::Model;
+use crate::model::{Model, ColumnVisibility};
 
 #[derive(Clone)]
 pub enum Msg {
@@ -19,14 +19,21 @@ pub enum Msg {
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     match msg {
         Msg::ChangeFilterColumn(index, new_value) => {
-            handle_change_filter_column(model, index, new_value)
+            model.filters[index].0 = new_value.parse::<usize>().ok();
         }
         Msg::ChangeFilterValue(index, new_value) => {
-            handle_change_filter_value(model, index, new_value)
+            model.filters[index].1 = new_value;
         }
-        Msg::ChangeColumnVisibility(index, _) => handle_change_column_visibility(model, index),
+        Msg::ChangeColumnVisibility(index, new_value) => {
+            model.column_visibility[index] = match new_value.as_ref() {
+                "Auto" => ColumnVisibility::Auto,
+                "Hidden" => ColumnVisibility::Hidden,
+                "Shown" => ColumnVisibility::Shown,
+                _ => panic!("Unexpected ColumnVisibility")
+            }
+        },
         Msg::ChangeSortColumn(index, new_value) => {
-            handle_change_sort_column(model, index, new_value)
+            model.sort_columns[index] = new_value.parse::<usize>().ok()
         }
         Msg::FetchData => {
             orders.skip().perform_cmd(fetch_data());
@@ -43,23 +50,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     }
 }
 
-fn handle_change_filter_column(model: &mut Model, index: usize, new_column: String) {
-    model.filters[index].0 = new_column.parse::<usize>().ok();
-}
-
-fn handle_change_filter_value(model: &mut Model, index: usize, new_value: String) {
-    model.filters[index].1 = new_value;
-}
-
-fn handle_change_column_visibility(model: &mut Model, index: usize) {
-    model.column_visibility[index] = !model.column_visibility[index];
-}
-
-fn handle_change_sort_column(model: &mut Model, index: usize, new_column: String) {
-    model.sort_columns[index] = new_column.parse::<usize>().ok()
-}
-
-fn fetch_data() -> impl Future<Item=Msg, Error=Msg> {
+fn fetch_data() -> impl Future<Item = Msg, Error = Msg> {
     Request::new("/public/acadian-dress.csv").fetch_string(Msg::DataFetched)
 }
 
@@ -81,6 +72,6 @@ fn load_dataset(model: &mut Model, data: String) {
     }
 
     model.filters = vec![(Option::None, String::new()); 3];
-    model.column_visibility = vec![true; model.columns.len()];
+    model.column_visibility = vec![ColumnVisibility::Auto; model.columns.len()];
     model.sort_columns = vec![Option::None; 3];
 }

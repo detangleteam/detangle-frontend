@@ -4,6 +4,8 @@
 }
 
 #ColumnsList {
+    display: flex;
+    flex-direction: column;
     overflow-y: auto;
 }
 
@@ -16,6 +18,11 @@
     display: flex;
     justify-content: space-evenly;
     max-height: 180px;
+}
+
+.ColumnControl {
+    display: flex;
+    justify-content: space-between;
 }
 
 table {

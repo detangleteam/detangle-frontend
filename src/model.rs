@@ -1,6 +1,6 @@
 pub struct Model {
     pub columns: Vec<String>,
-    pub column_visibility: Vec<bool>,
+    pub column_visibility: Vec<ColumnVisibility>,
     pub filters: Vec<(Option<usize>, String)>,
     pub sort_columns: Vec<Option<usize>>,
     pub items: Vec<Vec<String>>,
@@ -16,4 +16,11 @@ impl Default for Model {
             items: Vec::new(),
         }
     }
+}
+
+#[derive(Clone, Copy, PartialEq)]
+pub enum ColumnVisibility {
+    Auto,
+    Hidden,
+    Shown
 }
