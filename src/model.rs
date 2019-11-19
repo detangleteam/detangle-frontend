@@ -1,7 +1,7 @@
 pub struct Model {
     pub columns: Vec<String>,
     pub column_visibility: Vec<ColumnVisibility>,
-    pub filters: Vec<(Option<usize>, String)>,
+    pub filters: Vec<Filter>,
     pub sort_columns: Vec<Option<usize>>,
     pub items: Vec<Vec<String>>,
 }
@@ -23,4 +23,29 @@ pub enum ColumnVisibility {
     Auto,
     Hidden,
     Shown
+}
+
+#[derive(Clone)]
+pub struct Filter {
+    pub boolean_op: BooleanOp,
+    pub column: Option<usize>,
+    pub value: String
+}
+
+#[derive(Clone, Copy, PartialEq)]
+pub enum BooleanOp {
+    And,
+    AndNot,
+    Or,
+    OrNot
+}
+
+impl Default for Filter {
+    fn default() -> Self {
+        Self {
+            boolean_op: BooleanOp::And,
+            column: Option::None,
+            value: String::new()
+        }
+    }
 }

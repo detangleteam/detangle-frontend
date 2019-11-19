@@ -2,8 +2,7 @@ use std::cmp::Ordering;
 
 use seed::prelude::*;
 
-use crate::model::Model;
-use crate::model::ColumnVisibility;
+use crate::model::{Model, ColumnVisibility, BooleanOp};
 use crate::update::Msg;
 
 pub fn view(model: &Model) -> impl View<Msg> {
@@ -25,20 +24,41 @@ fn filter_controls(model: &Model) -> Node<Msg> {
     div![
         attrs! {At::Id => "Filters"; At::Class => "ControlView"},
         h2!["Filter"],
-        model
-            .filters
-            .iter()
-            .enumerate()
-            .map(|(i, _)| filter_control(model, i))
-            .collect::<Vec<Node<Msg>>>()
+        div![
+            attrs! {At::Id => "FilterList"; At::Class => "ControlList"},
+            model
+                .filters
+                .iter()
+                .enumerate()
+                .map(|(i, _)| filter_control(model, i))
+                .collect::<Vec<Node<Msg>>>(),
+            add_filter_button()
+        ]
     ]
 }
 
 fn filter_control(model: &Model, index: usize) -> Node<Msg> {
     div![
         attrs! {At::Class => "Filter"},
+        if index == 0 {
+            select![
+                attrs! {At::Class => "FilterBooleanOpInput";},
+                input_ev(Ev::Input, move |value| Msg::ChangeFilterBooleanOp(index, value)),
+                option![attrs! {At::Value => "And"; At::Selected => (model.filters[index].boolean_op == BooleanOp::And).as_at_value()}, ""],
+                option![attrs! {At::Value => "AndNot"; At::Selected => (model.filters[index].boolean_op == BooleanOp::AndNot).as_at_value()}, "NOT"],
+            ]
+        } else {
+            select![
+                attrs! {At::Class => "FilterBooleanOpInput";},
+                input_ev(Ev::Input, move |value| Msg::ChangeFilterBooleanOp(index, value)),
+                option![attrs! {At::Value => "And"; At::Selected => (model.filters[index].boolean_op == BooleanOp::And).as_at_value()}, "AND"],
+                option![attrs! {At::Value => "AndNot"; At::Selected => (model.filters[index].boolean_op == BooleanOp::AndNot).as_at_value()}, "AND NOT"],
+                option![attrs! {At::Value => "Or"; At::Selected => (model.filters[index].boolean_op == BooleanOp::Or).as_at_value()}, "OR"],
+                option![attrs! {At::Value => "OrNot"; At::Selected => (model.filters[index].boolean_op == BooleanOp::OrNot).as_at_value()}, "OR NOT"]
+            ]
+        },
         select![
-            attrs! {At::Class => "FilterColumn"; At::Value => ""},
+            attrs! {At::Class => "FilterColumn"},
             input_ev(Ev::Input, move |value| Msg::ChangeFilterColumn(
                 index, value
             )),
@@ -51,9 +71,63 @@ fn filter_control(model: &Model, index: usize) -> Node<Msg> {
                 .collect::<Vec<Node<Msg>>>()
         ],
         input![
-            attrs! {At::Class => "FilterValue"; At::Value => model.filters[index].1},
+            attrs! {At::Class => "FilterValue"; At::Value => model.filters[index].value},
             input_ev(Ev::Input, move |value| Msg::ChangeFilterValue(index, value))
+        ],
+        button![
+            simple_ev(Ev::Click, Msg::RemoveFilter(index)),
+            "-"
         ]
+    ]
+}
+
+fn add_filter_button() -> Node<Msg> {
+    button![
+        simple_ev(Ev::Click, Msg::AddFilter),
+        "+ Add Filter"
+    ]
+}
+
+fn sort_controls(model: &Model) -> Node<Msg> {
+    div![
+        attrs! {At::Id => "Sort", At::Class => "ControlView"},
+        h2!["Sort"],
+        div![
+            attrs! {At::Class => "ControlList"},
+            model
+                .sort_columns
+                .iter()
+                .enumerate()
+                .map(|(i, _)| sort_control(model, i))
+                .collect::<Vec<Node<Msg>>>(),
+            add_sort_button()
+        ]
+    ]
+}
+
+fn sort_control(model: &Model, index: usize) -> Node<Msg> {
+    div![
+        select![
+            input_ev(Ev::Input, move |value| Msg::ChangeSortColumn(index, value)),
+            option![attrs! {At::Value => ""}, ""],
+            model
+                .columns
+                .iter()
+                .enumerate()
+                .map(|(i, c)| option![attrs! {At::Value => i}, c])
+                .collect::<Vec<Node<Msg>>>()
+        ],
+        button![
+            simple_ev(Ev::Click, Msg::RemoveSortColumn(index)),
+            "-"
+        ]
+    ]
+}
+
+fn add_sort_button() -> Node<Msg> {
+    button![
+        simple_ev(Ev::Click, Msg::AddSortColumn),
+        "+ Add Sort"
     ]
 }
 
@@ -62,7 +136,7 @@ fn column_controls(model: &Model) -> Node<Msg> {
         attrs! {At::Id => "Columns"; At::Class => "ControlView"},
         h2!["Columns"],
         div![
-            attrs! {At::Id => "ColumnsList"},
+            attrs! {At::Id => "ColumnList"; At::Class => "ControlList"},
             all_column_control(model),
             model
                 .columns
@@ -114,29 +188,6 @@ fn column_control(model: &Model, column_index: usize) -> Node<Msg> {
     ]
 }
 
-fn sort_controls(model: &Model) -> Node<Msg> {
-    div![
-        attrs! {At::Id => "Sort", At::Class => "ControlView"},
-        h2!["Sort"],
-        model
-            .sort_columns
-            .iter()
-            .enumerate()
-            .map(|(i, _)| div![select![
-                attrs! {At::Value => ""},
-                input_ev(Ev::Input, move |value| Msg::ChangeSortColumn(i, value)),
-                option![attrs! {At::Value => ""}, ""],
-                model
-                    .columns
-                    .iter()
-                    .enumerate()
-                    .map(|(i, c)| option![attrs! {At::Value => i}, c])
-                    .collect::<Vec<Node<Msg>>>()
-            ]])
-            .collect::<Vec<Node<Msg>>>()
-    ]
-}
-
 fn item_table(model: &Model) -> Node<Msg> {
     let mut sorted_items = model
         .items
@@ -180,18 +231,43 @@ fn item_row(model: &Model, column_visibility: &Vec<bool>, item: &Vec<String>) ->
 // Helper Functions
 
 fn apply_filters(model: &Model, item: &[String]) -> bool {
-    for (column, filter_string) in model.filters.clone() {
-        if let Some(c) = column {
-            if !item[c]
-                .to_lowercase()
-                .contains(&filter_string.to_lowercase())
-            {
-                return false;
+    let mut current_filter_result: Option<bool> = Option::None;
+
+    for filter in model.filters.clone() {
+        if let Some(c) = filter.column {
+            match filter.boolean_op {
+                BooleanOp::And => {
+                    if current_filter_result == Option::Some(false) {
+                        break;
+                    } else {
+                        current_filter_result = Option::Some(item[c].to_lowercase().contains(&filter.value.to_lowercase()));
+                    }
+                }
+                BooleanOp::AndNot => {
+                    if current_filter_result == Option::Some(false) {
+                        break;
+                    } else {
+                        current_filter_result = Option::Some(!item[c].to_lowercase().contains(&filter.value.to_lowercase()));
+                    }
+                }
+                BooleanOp::Or => {
+                    if current_filter_result == Option::Some(false) {
+                        current_filter_result = Option::Some(item[c].to_lowercase().contains(&filter.value.to_lowercase()));
+                    }
+                }
+                BooleanOp::OrNot => {
+                    if current_filter_result == Option::Some(false) {
+                        current_filter_result = Option::Some(!item[c].to_lowercase().contains(&filter.value.to_lowercase()));
+                    }
+                }
             }
         }
     }
 
-    true
+    match current_filter_result {
+        None => true,
+        Some(result) => result
+    }
 }
 
 fn sort_items(model: &Model, item_a: &[String], item_b: &[String]) -> Ordering {
