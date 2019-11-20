@@ -38,40 +38,40 @@ fn filter_controls(model: &Model) -> Node<Msg> {
 }
 
 fn filter_control(model: &Model, index: usize) -> Node<Msg> {
+    let filter = &model.filters[index];
+
     div![
         attrs! {At::Class => "Filter"},
         if index == 0 {
             select![
                 attrs! {At::Class => "FilterBooleanOpInput";},
                 input_ev(Ev::Input, move |value| Msg::ChangeFilterBooleanOp(index, value)),
-                option![attrs! {At::Value => "And"; At::Selected => (model.filters[index].boolean_op == BooleanOp::And).as_at_value()}, ""],
-                option![attrs! {At::Value => "AndNot"; At::Selected => (model.filters[index].boolean_op == BooleanOp::AndNot).as_at_value()}, "NOT"],
+                option![attrs! {At::Value => "And"; At::Selected => (filter.boolean_op == BooleanOp::And).as_at_value()}, ""],
+                option![attrs! {At::Value => "AndNot"; At::Selected => (filter.boolean_op == BooleanOp::AndNot).as_at_value()}, "NOT"],
             ]
         } else {
             select![
                 attrs! {At::Class => "FilterBooleanOpInput";},
                 input_ev(Ev::Input, move |value| Msg::ChangeFilterBooleanOp(index, value)),
-                option![attrs! {At::Value => "And"; At::Selected => (model.filters[index].boolean_op == BooleanOp::And).as_at_value()}, "AND"],
-                option![attrs! {At::Value => "AndNot"; At::Selected => (model.filters[index].boolean_op == BooleanOp::AndNot).as_at_value()}, "AND NOT"],
-                option![attrs! {At::Value => "Or"; At::Selected => (model.filters[index].boolean_op == BooleanOp::Or).as_at_value()}, "OR"],
-                option![attrs! {At::Value => "OrNot"; At::Selected => (model.filters[index].boolean_op == BooleanOp::OrNot).as_at_value()}, "OR NOT"]
+                option![attrs! {At::Value => "And"; At::Selected => (filter.boolean_op == BooleanOp::And).as_at_value()}, "AND"],
+                option![attrs! {At::Value => "AndNot"; At::Selected => (filter.boolean_op == BooleanOp::AndNot).as_at_value()}, "AND NOT"],
+                option![attrs! {At::Value => "Or"; At::Selected => (filter.boolean_op == BooleanOp::Or).as_at_value()}, "OR"],
+                option![attrs! {At::Value => "OrNot"; At::Selected => (filter.boolean_op == BooleanOp::OrNot).as_at_value()}, "OR NOT"]
             ]
         },
         select![
             attrs! {At::Class => "FilterColumn"},
-            input_ev(Ev::Input, move |value| Msg::ChangeFilterColumn(
-                index, value
-            )),
-            option![attrs! {At::Value => ""}, ""],
+            input_ev(Ev::Input, move |value| Msg::ChangeFilterColumn(index, value)),
+            option![attrs! {At::Value => ""; At::Selected => (filter.column == Option::None).as_at_value()}, ""],
             model
                 .columns
                 .iter()
                 .enumerate()
-                .map(|(i, c)| option![attrs! {At::Value => i}, c])
+                .map(|(i, c)| option![attrs! {At::Value => i; At::Selected => (filter.column == Option::Some(i)).as_at_value()}, c])
                 .collect::<Vec<Node<Msg>>>()
         ],
         input![
-            attrs! {At::Class => "FilterValue"; At::Value => model.filters[index].value},
+            attrs! {At::Class => "FilterValue"; At::Value => filter.value},
             input_ev(Ev::Input, move |value| Msg::ChangeFilterValue(index, value))
         ],
         button![
@@ -106,15 +106,17 @@ fn sort_controls(model: &Model) -> Node<Msg> {
 }
 
 fn sort_control(model: &Model, index: usize) -> Node<Msg> {
+    let column_index = model.sort_columns[index];
+
     div![
         select![
             input_ev(Ev::Input, move |value| Msg::ChangeSortColumn(index, value)),
-            option![attrs! {At::Value => ""}, ""],
+            option![attrs! {At::Value => ""; At::Selected => (column_index == Option::None).as_at_value()}, ""],
             model
                 .columns
                 .iter()
                 .enumerate()
-                .map(|(i, c)| option![attrs! {At::Value => i}, c])
+                .map(|(i, c)| option![attrs! {At::Value => i; At::Selected => (column_index == Option::Some(i)).as_at_value()}, c])
                 .collect::<Vec<Node<Msg>>>()
         ],
         button![
@@ -137,7 +139,7 @@ fn column_controls(model: &Model) -> Node<Msg> {
         h2!["Columns"],
         div![
             attrs! {At::Id => "ColumnList"; At::Class => "ControlList"},
-            all_column_control(model),
+            all_column_control(),
             model
                 .columns
                 .iter()
@@ -148,7 +150,7 @@ fn column_controls(model: &Model) -> Node<Msg> {
     ]
 }
 
-fn all_column_control(model: &Model) -> Node<Msg> {
+fn all_column_control() -> Node<Msg> {
     let input_id = "column_visibility_all".to_string();
 
     div![
@@ -199,11 +201,12 @@ fn item_table(model: &Model) -> Node<Msg> {
 
     div![
         attrs! {At::Id => "Data", At::Class => "DataView"},
+        format!("{} Items Shown", sorted_items.len()),
         table![
             thead![header_row(model, &actual_column_visibility)],
             tbody![sorted_items
                 .iter()
-                .map(|item| item_row(model, &actual_column_visibility, item))
+                .map(|item| item_row(&actual_column_visibility, item))
                 .collect::<Vec<Node<Msg>>>()]
         ]
     ]
@@ -219,7 +222,7 @@ fn header_row(model: &Model, column_visibility: &Vec<bool>) -> Node<Msg> {
         .collect::<Vec<Node<Msg>>>()]
 }
 
-fn item_row(model: &Model, column_visibility: &Vec<bool>, item: &Vec<String>) -> Node<Msg> {
+fn item_row(column_visibility: &Vec<bool>, item: &Vec<String>) -> Node<Msg> {
     tr![item
         .iter()
         .enumerate()
@@ -234,6 +237,10 @@ fn apply_filters(model: &Model, item: &[String]) -> bool {
     let mut current_filter_result: Option<bool> = Option::None;
 
     for filter in model.filters.clone() {
+        if filter.value.is_empty() {
+            continue;
+        }
+
         if let Some(c) = filter.column {
             match filter.boolean_op {
                 BooleanOp::And => {
